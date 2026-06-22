@@ -16,11 +16,13 @@ export default function WordFinder() {
   const [searching, setSearching] = useState(false)
   const [letters, setLetters] = useState("")
   const [minLength, setMinLength] = useState("2")
+  const [exactLength, setExactLength] = useState("")
   const [results, setResults] = useState<Map<number, string[]>>(new Map())
   const [error, setError] = useState("")
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
 
   const [startsWithLetters, setStartsWithLetters] = useState("")
+  const [startsWithExactLength, setStartsWithExactLength] = useState("")
   const [startsWithResults, setStartsWithResults] = useState<Map<number, string[]>>(new Map())
   const [startsWithSearching, setStartsWithSearching] = useState(false)
   const [startsWithError, setStartsWithError] = useState("")
@@ -65,13 +67,19 @@ export default function WordFinder() {
     return true
   }
 
-  const findWords = (inputLetters: string, minWordLength: number) => {
+  const findWords = (inputLetters: string, minWordLength: number, exactLen?: number) => {
     const foundWords: string[] = []
     const normalizedLetters = inputLetters.toLowerCase().trim()
 
     for (const word of dictionary) {
-      if (word.length >= minWordLength && canFormWord(normalizedLetters, word)) {
-        foundWords.push(word)
+      if (exactLen) {
+        if (word.length === exactLen && canFormWord(normalizedLetters, word)) {
+          foundWords.push(word)
+        }
+      } else {
+        if (word.length >= minWordLength && canFormWord(normalizedLetters, word)) {
+          foundWords.push(word)
+        }
       }
     }
 
@@ -101,7 +109,8 @@ export default function WordFinder() {
 
     setTimeout(() => {
       const minLen = Number.parseInt(minLength) || 2
-      const foundWords = findWords(letters, minLen)
+      const exactLen = exactLength ? Number.parseInt(exactLength) : undefined
+      const foundWords = findWords(letters, minLen, exactLen)
       setResults(foundWords)
       setSearching(false)
     }, 300)
@@ -127,12 +136,13 @@ export default function WordFinder() {
     })
   }
 
-  const findWordsStartingWith = (prefix: string) => {
+  const findWordsStartingWith = (prefix: string, exactLen?: number) => {
     const foundWords: string[] = []
     const normalizedPrefix = prefix.toLowerCase().trim()
 
     for (const word of dictionary) {
       if (word.startsWith(normalizedPrefix)) {
+        if (exactLen && word.length !== exactLen) continue;
         foundWords.push(word)
       }
     }
@@ -162,7 +172,8 @@ export default function WordFinder() {
     setStartsWithSearching(true)
 
     setTimeout(() => {
-      const foundWords = findWordsStartingWith(startsWithLetters)
+      const exactLen = startsWithExactLength ? Number.parseInt(startsWithExactLength) : undefined
+      const foundWords = findWordsStartingWith(startsWithLetters, exactLen)
       setStartsWithResults(foundWords)
       setStartsWithSearching(false)
     }, 300)
@@ -245,17 +256,33 @@ export default function WordFinder() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="minLength">Minimum Word Length</Label>
-              <Input
-                id="minLength"
-                type="number"
-                min="1"
-                placeholder="2"
-                value={minLength}
-                onChange={(e) => setMinLength(e.target.value)}
-                className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="minLength">Min Length</Label>
+                <Input
+                  id="minLength"
+                  type="number"
+                  min="1"
+                  placeholder="2"
+                  value={minLength}
+                  onChange={(e) => setMinLength(e.target.value)}
+                  className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="exactLength">Exact Length</Label>
+                <Input
+                  id="exactLength"
+                  type="number"
+                  min="1"
+                  placeholder="Any"
+                  value={exactLength}
+                  onChange={(e) => setExactLength(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
+                />
+              </div>
             </div>
 
             {error && (
@@ -362,17 +389,33 @@ export default function WordFinder() {
                 <CardDescription>Enter 1 to 3 letters to find words that begin with them</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="startsWithLetters">Prefix Letters (1-3 chars)</Label>
-                  <Input
-                    id="startsWithLetters"
-                    placeholder="e.g., pre"
-                    value={startsWithLetters}
-                    maxLength={3}
-                    onChange={(e) => setStartsWithLetters(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleStartsWithSearch()}
-                    className="text-lg h-14 px-4 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startsWithLetters">Prefix Letters (1-3 chars)</Label>
+                    <Input
+                      id="startsWithLetters"
+                      placeholder="e.g., pre"
+                      value={startsWithLetters}
+                      maxLength={3}
+                      onChange={(e) => setStartsWithLetters(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleStartsWithSearch()}
+                      className="text-lg h-14 px-4 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="startsWithExactLength">Exact Length</Label>
+                    <Input
+                      id="startsWithExactLength"
+                      type="number"
+                      min="1"
+                      placeholder="Any"
+                      value={startsWithExactLength}
+                      onChange={(e) => setStartsWithExactLength(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleStartsWithSearch()}
+                      className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
+                    />
+                  </div>
                 </div>
 
                 {startsWithError && (
