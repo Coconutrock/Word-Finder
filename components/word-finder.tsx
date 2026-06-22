@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Search, Sparkles, AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function WordFinder() {
   const [dictionary, setDictionary] = useState<Set<string>>(new Set())
@@ -18,6 +19,12 @@ export default function WordFinder() {
   const [results, setResults] = useState<Map<number, string[]>>(new Map())
   const [error, setError] = useState("")
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
+
+  const [startsWithLetters, setStartsWithLetters] = useState("")
+  const [startsWithResults, setStartsWithResults] = useState<Map<number, string[]>>(new Map())
+  const [startsWithSearching, setStartsWithSearching] = useState(false)
+  const [startsWithError, setStartsWithError] = useState("")
+  const [startsWithExpandedGroups, setStartsWithExpandedGroups] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     loadDictionary()
@@ -120,6 +127,67 @@ export default function WordFinder() {
     })
   }
 
+  const findWordsStartingWith = (prefix: string) => {
+    const foundWords: string[] = []
+    const normalizedPrefix = prefix.toLowerCase().trim()
+
+    for (const word of dictionary) {
+      if (word.startsWith(normalizedPrefix)) {
+        foundWords.push(word)
+      }
+    }
+
+    const grouped = new Map<number, string[]>()
+    for (const word of foundWords) {
+      if (!grouped.has(word.length)) {
+        grouped.set(word.length, [])
+      }
+      grouped.get(word.length)!.push(word)
+    }
+
+    for (const [length, words] of grouped) {
+      grouped.set(length, words.sort())
+    }
+
+    return new Map([...grouped.entries()].sort((a, b) => b[0] - a[0]))
+  }
+
+  const handleStartsWithSearch = () => {
+    if (!startsWithLetters.trim() || startsWithLetters.trim().length > 3) {
+      setStartsWithError("Please enter 1 to 3 letters")
+      return
+    }
+
+    setStartsWithError("")
+    setStartsWithSearching(true)
+
+    setTimeout(() => {
+      const foundWords = findWordsStartingWith(startsWithLetters)
+      setStartsWithResults(foundWords)
+      setStartsWithSearching(false)
+    }, 300)
+  }
+
+  const getStartsWithTotalWords = () => {
+    let total = 0
+    for (const words of startsWithResults.values()) {
+      total += words.length
+    }
+    return total
+  }
+
+  const toggleStartsWithExpanded = (length: number) => {
+    setStartsWithExpandedGroups((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(length)) {
+        newSet.delete(length)
+      } else {
+        newSet.add(length)
+      }
+      return newSet
+    })
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -150,7 +218,14 @@ export default function WordFinder() {
           </p>
         </div>
 
-        {/* Search Card */}
+        <Tabs defaultValue="anagrams" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsTrigger value="anagrams" className="text-base py-3">Form Words</TabsTrigger>
+            <TabsTrigger value="starts-with" className="text-base py-3">Starts With</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="anagrams" className="space-y-8">
+            {/* Search Card */}
         <Card className="border-2">
           <CardHeader>
             <CardTitle>Enter Your Letters</CardTitle>
@@ -277,6 +352,126 @@ export default function WordFinder() {
             </CardContent>
           </Card>
         )}
+          </TabsContent>
+
+          <TabsContent value="starts-with" className="space-y-8">
+            {/* Starts With Card */}
+            <Card className="border-2">
+              <CardHeader>
+                <CardTitle>Starts With</CardTitle>
+                <CardDescription>Enter 1 to 3 letters to find words that begin with them</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="startsWithLetters">Prefix Letters (1-3 chars)</Label>
+                  <Input
+                    id="startsWithLetters"
+                    placeholder="e.g., pre"
+                    value={startsWithLetters}
+                    maxLength={3}
+                    onChange={(e) => setStartsWithLetters(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleStartsWithSearch()}
+                    className="text-lg h-12"
+                  />
+                </div>
+
+                {startsWithError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{startsWithError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <Button
+                  onClick={handleStartsWithSearch}
+                  disabled={startsWithSearching || !startsWithLetters.trim() || startsWithLetters.trim().length > 3}
+                  className="w-full h-12 text-base"
+                  size="lg"
+                >
+                  {startsWithSearching ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="mr-2 h-5 w-5" />
+                      Find Words
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Starts With Results */}
+            {startsWithResults.size > 0 && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">
+                    Found {getStartsWithTotalWords()} word{getStartsWithTotalWords() !== 1 ? "s" : ""}
+                  </h2>
+                  <Badge variant="secondary" className="text-base px-4 py-2">
+                    {startsWithResults.size} length{startsWithResults.size !== 1 ? "s" : ""}
+                  </Badge>
+                </div>
+
+                <div className="grid gap-6">
+                  {Array.from(startsWithResults.entries()).map(([length, words]) => {
+                    const isExpanded = startsWithExpandedGroups.has(length)
+                    const displayWords = isExpanded ? words : words.slice(0, 50)
+                    const hasMore = words.length > 50
+
+                    return (
+                      <Card key={length}>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle>{length}-Letter Words</CardTitle>
+                            <Badge variant="outline">{words.length} found</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex flex-wrap gap-2">
+                            {displayWords.map((word) => (
+                              <Badge key={word} variant="secondary" className="text-sm px-3 py-1.5 font-mono">
+                                {word}
+                              </Badge>
+                            ))}
+                          </div>
+                          {hasMore && (
+                            <Button variant="outline" size="sm" onClick={() => toggleStartsWithExpanded(length)} className="w-full">
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="mr-2 h-4 w-4" />
+                                  Show Less
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="mr-2 h-4 w-4" />
+                                  Show All {words.length} Words
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {startsWithResults.size === 0 && startsWithLetters && !startsWithSearching && (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No words found</h3>
+                  <p className="text-muted-foreground">Try a different prefix</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+
       </div>
     </div>
   )
