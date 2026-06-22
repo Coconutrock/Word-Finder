@@ -219,9 +219,9 @@ export default function WordFinder() {
         </div>
 
         <Tabs defaultValue="anagrams" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="anagrams" className="text-base py-3">Form Words</TabsTrigger>
-            <TabsTrigger value="starts-with" className="text-base py-3">Starts With</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 mb-8 h-auto p-1 bg-muted/50 rounded-xl">
+            <TabsTrigger value="anagrams" className="text-base py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300">Form Words</TabsTrigger>
+            <TabsTrigger value="starts-with" className="text-base py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300">Starts With</TabsTrigger>
           </TabsList>
           
           <TabsContent value="anagrams" className="space-y-8">
@@ -240,7 +240,7 @@ export default function WordFinder() {
                 value={letters}
                 onChange={(e) => setLetters(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="text-lg h-12"
+                className="text-lg h-14 px-4 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
                 autoFocus
               />
             </div>
@@ -254,7 +254,7 @@ export default function WordFinder() {
                 placeholder="2"
                 value={minLength}
                 onChange={(e) => setMinLength(e.target.value)}
-                className="h-12"
+                className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
               />
             </div>
 
@@ -268,7 +268,7 @@ export default function WordFinder() {
             <Button
               onClick={handleSearch}
               disabled={searching || !letters.trim()}
-              className="w-full h-12 text-base"
+              className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-[1.01] shadow-lg hover:shadow-primary/25 active:scale-[0.99]"
               size="lg"
             >
               {searching ? (
@@ -321,7 +321,7 @@ export default function WordFinder() {
                         ))}
                       </div>
                       {hasMore && (
-                        <Button variant="outline" size="sm" onClick={() => toggleExpanded(length)} className="w-full">
+                        <Button variant="outline" size="sm" onClick={() => toggleExpanded(length)} className="w-full py-4 transition-all duration-300 hover:bg-secondary">
                           {isExpanded ? (
                             <>
                               <ChevronUp className="mr-2 h-4 w-4" />
@@ -371,7 +371,7 @@ export default function WordFinder() {
                     maxLength={3}
                     onChange={(e) => setStartsWithLetters(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleStartsWithSearch()}
-                    className="text-lg h-12"
+                    className="text-lg h-14 px-4 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
                   />
                 </div>
 
@@ -385,7 +385,7 @@ export default function WordFinder() {
                 <Button
                   onClick={handleStartsWithSearch}
                   disabled={startsWithSearching || !startsWithLetters.trim() || startsWithLetters.trim().length > 3}
-                  className="w-full h-12 text-base"
+                  className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-[1.01] shadow-lg hover:shadow-primary/25 active:scale-[0.99]"
                   size="lg"
                 >
                   {startsWithSearching ? (
@@ -438,7 +438,7 @@ export default function WordFinder() {
                             ))}
                           </div>
                           {hasMore && (
-                            <Button variant="outline" size="sm" onClick={() => toggleStartsWithExpanded(length)} className="w-full">
+                            <Button variant="outline" size="sm" onClick={() => toggleStartsWithExpanded(length)} className="w-full py-4 transition-all duration-300 hover:bg-secondary">
                               {isExpanded ? (
                                 <>
                                   <ChevronUp className="mr-2 h-4 w-4" />
