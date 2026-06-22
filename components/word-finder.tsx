@@ -9,20 +9,24 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, Search, Sparkles, AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
 
 export default function WordFinder() {
   const [dictionary, setDictionary] = useState<Set<string>>(new Set())
+  const [commonDictionary, setCommonDictionary] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
   const [letters, setLetters] = useState("")
   const [minLength, setMinLength] = useState("2")
   const [maxLength, setMaxLength] = useState("")
+  const [commonOnly, setCommonOnly] = useState(true)
   const [results, setResults] = useState<Map<number, string[]>>(new Map())
   const [error, setError] = useState("")
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
 
   const [startsWithLetters, setStartsWithLetters] = useState("")
   const [startsWithMaxLength, setStartsWithMaxLength] = useState("")
+  const [startsWithCommonOnly, setStartsWithCommonOnly] = useState(true)
   const [startsWithResults, setStartsWithResults] = useState<Map<number, string[]>>(new Map())
   const [startsWithSearching, setStartsWithSearching] = useState(false)
   const [startsWithError, setStartsWithError] = useState("")
@@ -35,13 +39,24 @@ export default function WordFinder() {
   const loadDictionary = async () => {
     try {
       setLoading(true)
-      const response = await fetch("https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt")
+      const [response, commonResponse] = await Promise.all([
+        fetch("https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt"),
+        fetch("https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-no-swears.txt")
+      ])
       const text = await response.text()
       const words = text
         .split("\n")
         .map((word) => word.trim().toLowerCase())
         .filter(Boolean)
       setDictionary(new Set(words))
+
+      const commonText = await commonResponse.text()
+      const commonWords = commonText
+        .split("\n")
+        .map((word) => word.trim().toLowerCase())
+        .filter(Boolean)
+      setCommonDictionary(new Set(commonWords))
+
       setLoading(false)
     } catch (err) {
       console.error("Failed to load dictionary:", err)
@@ -67,13 +82,15 @@ export default function WordFinder() {
     return true
   }
 
-  const findWords = (inputLetters: string, minWordLength: number, maxLen?: number) => {
+  const findWords = (inputLetters: string, minWordLength: number, maxLen?: number, onlyCommon?: boolean) => {
     const foundWords: string[] = []
     const normalizedLetters = inputLetters.toLowerCase().trim()
 
     for (const word of dictionary) {
       if (word.length >= minWordLength && (!maxLen || word.length <= maxLen) && canFormWord(normalizedLetters, word)) {
-        foundWords.push(word)
+        if (!onlyCommon || commonDictionary.has(word)) {
+          foundWords.push(word)
+        }
       }
     }
 
@@ -104,7 +121,7 @@ export default function WordFinder() {
     setTimeout(() => {
       const minLen = Number.parseInt(minLength) || 2
       const maxLen = maxLength ? Number.parseInt(maxLength) : undefined
-      const foundWords = findWords(letters, minLen, maxLen)
+      const foundWords = findWords(letters, minLen, maxLen, commonOnly)
       setResults(foundWords)
       setSearching(false)
     }, 300)
@@ -130,14 +147,16 @@ export default function WordFinder() {
     })
   }
 
-  const findWordsStartingWith = (prefix: string, maxLen?: number) => {
+  const findWordsStartingWith = (prefix: string, maxLen?: number, onlyCommon?: boolean) => {
     const foundWords: string[] = []
     const normalizedPrefix = prefix.toLowerCase().trim()
 
     for (const word of dictionary) {
       if (word.startsWith(normalizedPrefix)) {
         if (maxLen && word.length > maxLen) continue;
-        foundWords.push(word)
+        if (!onlyCommon || commonDictionary.has(word)) {
+          foundWords.push(word)
+        }
       }
     }
 
@@ -167,7 +186,7 @@ export default function WordFinder() {
 
     setTimeout(() => {
       const maxLen = startsWithMaxLength ? Number.parseInt(startsWithMaxLength) : undefined
-      const foundWords = findWordsStartingWith(startsWithLetters, maxLen)
+      const foundWords = findWordsStartingWith(startsWithLetters, maxLen, startsWithCommonOnly)
       setStartsWithResults(foundWords)
       setStartsWithSearching(false)
     }, 300)
@@ -277,6 +296,18 @@ export default function WordFinder() {
                   className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
                 />
               </div>
+            </div>
+
+            <div className="flex items-center justify-between space-x-2 pt-4 border-t">
+              <div className="space-y-0.5">
+                <Label htmlFor="commonOnly" className="text-base">Common Words Only</Label>
+                <p className="text-sm text-muted-foreground">Filter out obscure and rare words</p>
+              </div>
+              <Switch
+                id="commonOnly"
+                checked={commonOnly}
+                onCheckedChange={setCommonOnly}
+              />
             </div>
 
             {error && (
@@ -410,6 +441,18 @@ export default function WordFinder() {
                       className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
                     />
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between space-x-2 pt-4 border-t">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="startsWithCommonOnly" className="text-base">Common Words Only</Label>
+                    <p className="text-sm text-muted-foreground">Filter out obscure and rare words</p>
+                  </div>
+                  <Switch
+                    id="startsWithCommonOnly"
+                    checked={startsWithCommonOnly}
+                    onCheckedChange={setStartsWithCommonOnly}
+                  />
                 </div>
 
                 {startsWithError && (
