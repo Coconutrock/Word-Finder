@@ -220,6 +220,71 @@ export default function WordFinder() {
     })
   }
 
+  const findWordsEndsWith = (suffix: string, maxLen?: number, onlyCommon?: boolean) => {
+    const foundWords: string[] = []
+    const normalizedSuffix = suffix.toLowerCase().trim()
+
+    for (const word of dictionary) {
+      if (word.endsWith(normalizedSuffix)) {
+        if (maxLen && word.length > maxLen) continue;
+        if (!onlyCommon || commonDictionary.has(word)) {
+          foundWords.push(word)
+        }
+      }
+    }
+
+    const grouped = new Map<number, string[]>()
+    for (const word of foundWords) {
+      if (!grouped.has(word.length)) {
+        grouped.set(word.length, [])
+      }
+      grouped.get(word.length)!.push(word)
+    }
+
+    for (const [length, words] of grouped) {
+      grouped.set(length, words.sort())
+    }
+
+    return new Map([...grouped.entries()].sort((a, b) => b[0] - a[0]))
+  }
+
+  const handleEndsWithSearch = () => {
+    if (!endsWithLetters.trim() || endsWithLetters.trim().length > 3) {
+      setEndsWithError("Please enter 1 to 3 letters")
+      return
+    }
+
+    setEndsWithError("")
+    setEndsWithSearching(true)
+
+    setTimeout(() => {
+      const maxLen = endsWithMaxLength ? Number.parseInt(endsWithMaxLength) : undefined
+      const foundWords = findWordsEndsWith(endsWithLetters, maxLen, endsWithCommonOnly)
+      setEndsWithResults(foundWords)
+      setEndsWithSearching(false)
+    }, 300)
+  }
+
+  const getEndsWithTotalWords = () => {
+    let total = 0
+    for (const words of endsWithResults.values()) {
+      total += words.length
+    }
+    return total
+  }
+
+  const toggleEndsWithExpanded = (length: number) => {
+    setEndsWithExpandedGroups((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(length)) {
+        newSet.delete(length)
+      } else {
+        newSet.add(length)
+      }
+      return newSet
+    })
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
