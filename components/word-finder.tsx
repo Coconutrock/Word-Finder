@@ -24,21 +24,14 @@ export default function WordFinder() {
   const [error, setError] = useState("")
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
 
-  const [startsWithLetters, setStartsWithLetters] = useState("")
-  const [startsWithMaxLength, setStartsWithMaxLength] = useState("")
-  const [startsWithCommonOnly, setStartsWithCommonOnly] = useState(true)
-  const [startsWithResults, setStartsWithResults] = useState<Map<number, string[]>>(new Map())
-  const [startsWithSearching, setStartsWithSearching] = useState(false)
-  const [startsWithError, setStartsWithError] = useState("")
-  const [startsWithExpandedGroups, setStartsWithExpandedGroups] = useState<Set<number>>(new Set())
-
-  const [endsWithLetters, setEndsWithLetters] = useState("")
-  const [endsWithMaxLength, setEndsWithMaxLength] = useState("")
-  const [endsWithCommonOnly, setEndsWithCommonOnly] = useState(true)
-  const [endsWithResults, setEndsWithResults] = useState<Map<number, string[]>>(new Map())
-  const [endsWithSearching, setEndsWithSearching] = useState(false)
-  const [endsWithError, setEndsWithError] = useState("")
-  const [endsWithExpandedGroups, setEndsWithExpandedGroups] = useState<Set<number>>(new Set())
+  const [patternStartsWith, setPatternStartsWith] = useState("")
+  const [patternEndsWith, setPatternEndsWith] = useState("")
+  const [patternMaxLength, setPatternMaxLength] = useState("")
+  const [patternCommonOnly, setPatternCommonOnly] = useState(true)
+  const [patternResults, setPatternResults] = useState<Map<number, string[]>>(new Map())
+  const [patternSearching, setPatternSearching] = useState(false)
+  const [patternError, setPatternError] = useState("")
+  const [patternExpandedGroups, setPatternExpandedGroups] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     loadDictionary()
@@ -155,12 +148,16 @@ export default function WordFinder() {
     })
   }
 
-  const findWordsStartingWith = (prefix: string, maxLen?: number, onlyCommon?: boolean) => {
+  const findWordsByPattern = (startsWith: string, endsWith: string, maxLen?: number, onlyCommon?: boolean) => {
     const foundWords: string[] = []
-    const normalizedPrefix = prefix.toLowerCase().trim()
+    const normalizedStart = startsWith.toLowerCase().trim()
+    const normalizedEnd = endsWith.toLowerCase().trim()
 
     for (const word of dictionary) {
-      if (word.startsWith(normalizedPrefix)) {
+      const matchStart = normalizedStart ? word.startsWith(normalizedStart) : true
+      const matchEnd = normalizedEnd ? word.endsWith(normalizedEnd) : true
+      
+      if (matchStart && matchEnd) {
         if (maxLen && word.length > maxLen) continue;
         if (!onlyCommon || commonDictionary.has(word)) {
           foundWords.push(word)
@@ -183,98 +180,33 @@ export default function WordFinder() {
     return new Map([...grouped.entries()].sort((a, b) => b[0] - a[0]))
   }
 
-  const handleStartsWithSearch = () => {
-    if (!startsWithLetters.trim() || startsWithLetters.trim().length > 3) {
-      setStartsWithError("Please enter 1 to 3 letters")
+  const handlePatternSearch = () => {
+    if (!patternStartsWith.trim() && !patternEndsWith.trim()) {
+      setPatternError("Please enter starts with or ends with letters")
       return
     }
 
-    setStartsWithError("")
-    setStartsWithSearching(true)
+    setPatternError("")
+    setPatternSearching(true)
 
     setTimeout(() => {
-      const maxLen = startsWithMaxLength ? Number.parseInt(startsWithMaxLength) : undefined
-      const foundWords = findWordsStartingWith(startsWithLetters, maxLen, startsWithCommonOnly)
-      setStartsWithResults(foundWords)
-      setStartsWithSearching(false)
+      const maxLen = patternMaxLength ? Number.parseInt(patternMaxLength) : undefined
+      const foundWords = findWordsByPattern(patternStartsWith, patternEndsWith, maxLen, patternCommonOnly)
+      setPatternResults(foundWords)
+      setPatternSearching(false)
     }, 300)
   }
 
-  const getStartsWithTotalWords = () => {
+  const getPatternTotalWords = () => {
     let total = 0
-    for (const words of startsWithResults.values()) {
+    for (const words of patternResults.values()) {
       total += words.length
     }
     return total
   }
 
-  const toggleStartsWithExpanded = (length: number) => {
-    setStartsWithExpandedGroups((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(length)) {
-        newSet.delete(length)
-      } else {
-        newSet.add(length)
-      }
-      return newSet
-    })
-  }
-
-  const findWordsEndsWith = (suffix: string, maxLen?: number, onlyCommon?: boolean) => {
-    const foundWords: string[] = []
-    const normalizedSuffix = suffix.toLowerCase().trim()
-
-    for (const word of dictionary) {
-      if (word.endsWith(normalizedSuffix)) {
-        if (maxLen && word.length > maxLen) continue;
-        if (!onlyCommon || commonDictionary.has(word)) {
-          foundWords.push(word)
-        }
-      }
-    }
-
-    const grouped = new Map<number, string[]>()
-    for (const word of foundWords) {
-      if (!grouped.has(word.length)) {
-        grouped.set(word.length, [])
-      }
-      grouped.get(word.length)!.push(word)
-    }
-
-    for (const [length, words] of grouped) {
-      grouped.set(length, words.sort())
-    }
-
-    return new Map([...grouped.entries()].sort((a, b) => b[0] - a[0]))
-  }
-
-  const handleEndsWithSearch = () => {
-    if (!endsWithLetters.trim() || endsWithLetters.trim().length > 3) {
-      setEndsWithError("Please enter 1 to 3 letters")
-      return
-    }
-
-    setEndsWithError("")
-    setEndsWithSearching(true)
-
-    setTimeout(() => {
-      const maxLen = endsWithMaxLength ? Number.parseInt(endsWithMaxLength) : undefined
-      const foundWords = findWordsEndsWith(endsWithLetters, maxLen, endsWithCommonOnly)
-      setEndsWithResults(foundWords)
-      setEndsWithSearching(false)
-    }, 300)
-  }
-
-  const getEndsWithTotalWords = () => {
-    let total = 0
-    for (const words of endsWithResults.values()) {
-      total += words.length
-    }
-    return total
-  }
-
-  const toggleEndsWithExpanded = (length: number) => {
-    setEndsWithExpandedGroups((prev) => {
+  const togglePatternExpanded = (length: number) => {
+    setPatternExpandedGroups((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(length)) {
         newSet.delete(length)
@@ -316,10 +248,9 @@ export default function WordFinder() {
         </div>
 
         <Tabs defaultValue="anagrams" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8 h-auto p-1 bg-muted/50 rounded-xl">
+          <TabsList className="grid w-full grid-cols-2 mb-8 h-auto p-1 bg-muted/50 rounded-xl">
             <TabsTrigger value="anagrams" className="text-base py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300">Form Words</TabsTrigger>
-            <TabsTrigger value="starts-with" className="text-base py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300">Starts With</TabsTrigger>
-            <TabsTrigger value="ends-with" className="text-base py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300">Ends With</TabsTrigger>
+            <TabsTrigger value="pattern" className="text-base py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300">Starts & Ends With</TabsTrigger>
           </TabsList>
           
           <TabsContent value="anagrams" className="space-y-8">
@@ -480,183 +411,49 @@ export default function WordFinder() {
         )}
           </TabsContent>
 
-          <TabsContent value="starts-with" className="space-y-8">
-            {/* Starts With Card */}
+          <TabsContent value="pattern" className="space-y-8">
+            {/* Pattern Search Card */}
             <Card className="border-2">
               <CardHeader>
-                <CardTitle>Starts With</CardTitle>
-                <CardDescription>Enter 1 to 3 letters to find words that begin with them</CardDescription>
+                <CardTitle>Starts & Ends With</CardTitle>
+                <CardDescription>Find words that start and/or end with specific letters</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="startsWithLetters">Prefix Letters (1-3 chars)</Label>
+                    <Label htmlFor="patternStartsWith">Starts With</Label>
                     <Input
-                      id="startsWithLetters"
+                      id="patternStartsWith"
                       placeholder="e.g., pre"
-                      value={startsWithLetters}
-                      maxLength={3}
-                      onChange={(e) => setStartsWithLetters(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleStartsWithSearch()}
+                      value={patternStartsWith}
+                      onChange={(e) => setPatternStartsWith(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handlePatternSearch()}
                       className="text-lg h-14 px-4 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="startsWithMaxLength">Max Length</Label>
+                    <Label htmlFor="patternEndsWith">Ends With</Label>
                     <Input
-                      id="startsWithMaxLength"
-                      type="number"
-                      min="1"
-                      placeholder="Any"
-                      value={startsWithMaxLength}
-                      onChange={(e) => setStartsWithMaxLength(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleStartsWithSearch()}
-                      className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between space-x-2 pt-4 border-t">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="startsWithCommonOnly" className="text-base">Common Words Only</Label>
-                    <p className="text-sm text-muted-foreground">Filter out obscure and rare words</p>
-                  </div>
-                  <Switch
-                    id="startsWithCommonOnly"
-                    checked={startsWithCommonOnly}
-                    onCheckedChange={setStartsWithCommonOnly}
-                  />
-                </div>
-
-                {startsWithError && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{startsWithError}</AlertDescription>
-                  </Alert>
-                )}
-
-                <Button
-                  onClick={handleStartsWithSearch}
-                  disabled={startsWithSearching || !startsWithLetters.trim() || startsWithLetters.trim().length > 3}
-                  className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-[1.01] shadow-lg hover:shadow-primary/25 active:scale-[0.99]"
-                  size="lg"
-                >
-                  {startsWithSearching ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Searching...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="mr-2 h-5 w-5" />
-                      Find Words
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Starts With Results */}
-            {startsWithResults.size > 0 && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">
-                    Found {getStartsWithTotalWords()} word{getStartsWithTotalWords() !== 1 ? "s" : ""}
-                  </h2>
-                  <Badge variant="secondary" className="text-base px-4 py-2">
-                    {startsWithResults.size} length{startsWithResults.size !== 1 ? "s" : ""}
-                  </Badge>
-                </div>
-
-                <div className="grid gap-6">
-                  {Array.from(startsWithResults.entries()).map(([length, words]) => {
-                    const isExpanded = startsWithExpandedGroups.has(length)
-                    const displayWords = isExpanded ? words : words.slice(0, 50)
-                    const hasMore = words.length > 50
-
-                    return (
-                      <Card key={length}>
-                        <CardHeader>
-                          <div className="flex items-center justify-between">
-                            <CardTitle>{length}-Letter Words</CardTitle>
-                            <Badge variant="outline">{words.length} found</Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="flex flex-wrap gap-2">
-                            {displayWords.map((word) => (
-                              <Badge key={word} variant="secondary" className="text-sm px-3 py-1.5 font-mono">
-                                {word}
-                              </Badge>
-                            ))}
-                          </div>
-                          {hasMore && (
-                            <Button variant="outline" size="sm" onClick={() => toggleStartsWithExpanded(length)} className="w-full py-4 transition-all duration-300 hover:bg-secondary">
-                              {isExpanded ? (
-                                <>
-                                  <ChevronUp className="mr-2 h-4 w-4" />
-                                  Show Less
-                                </>
-                              ) : (
-                                <>
-                                  <ChevronDown className="mr-2 h-4 w-4" />
-                                  Show All {words.length} Words
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {startsWithResults.size === 0 && startsWithLetters && !startsWithSearching && (
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">No words found</h3>
-                  <p className="text-muted-foreground">Try a different prefix</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="ends-with" className="space-y-8">
-            {/* Ends With Card */}
-            <Card className="border-2">
-              <CardHeader>
-                <CardTitle>Ends With</CardTitle>
-                <CardDescription>Enter 1 to 3 letters to find words that end with them</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="endsWithLetters">Suffix Letters (1-3 chars)</Label>
-                    <Input
-                      id="endsWithLetters"
+                      id="patternEndsWith"
                       placeholder="e.g., ing"
-                      value={endsWithLetters}
-                      maxLength={3}
-                      onChange={(e) => setEndsWithLetters(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleEndsWithSearch()}
+                      value={patternEndsWith}
+                      onChange={(e) => setPatternEndsWith(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handlePatternSearch()}
                       className="text-lg h-14 px-4 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="endsWithMaxLength">Max Length</Label>
+                    <Label htmlFor="patternMaxLength">Max Length</Label>
                     <Input
-                      id="endsWithMaxLength"
+                      id="patternMaxLength"
                       type="number"
                       min="1"
                       placeholder="Any"
-                      value={endsWithMaxLength}
-                      onChange={(e) => setEndsWithMaxLength(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleEndsWithSearch()}
+                      value={patternMaxLength}
+                      onChange={(e) => setPatternMaxLength(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handlePatternSearch()}
                       className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
                     />
                   </div>
@@ -664,30 +461,30 @@ export default function WordFinder() {
 
                 <div className="flex items-center justify-between space-x-2 pt-4 border-t">
                   <div className="space-y-0.5">
-                    <Label htmlFor="endsWithCommonOnly" className="text-base">Common Words Only</Label>
+                    <Label htmlFor="patternCommonOnly" className="text-base">Common Words Only</Label>
                     <p className="text-sm text-muted-foreground">Filter out obscure and rare words</p>
                   </div>
                   <Switch
-                    id="endsWithCommonOnly"
-                    checked={endsWithCommonOnly}
-                    onCheckedChange={setEndsWithCommonOnly}
+                    id="patternCommonOnly"
+                    checked={patternCommonOnly}
+                    onCheckedChange={setPatternCommonOnly}
                   />
                 </div>
 
-                {endsWithError && (
+                {patternError && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{endsWithError}</AlertDescription>
+                    <AlertDescription>{patternError}</AlertDescription>
                   </Alert>
                 )}
 
                 <Button
-                  onClick={handleEndsWithSearch}
-                  disabled={endsWithSearching || !endsWithLetters.trim() || endsWithLetters.trim().length > 3}
+                  onClick={handlePatternSearch}
+                  disabled={patternSearching || (!patternStartsWith.trim() && !patternEndsWith.trim())}
                   className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-[1.01] shadow-lg hover:shadow-primary/25 active:scale-[0.99]"
                   size="lg"
                 >
-                  {endsWithSearching ? (
+                  {patternSearching ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Searching...
@@ -702,21 +499,21 @@ export default function WordFinder() {
               </CardContent>
             </Card>
 
-            {/* Ends With Results */}
-            {endsWithResults.size > 0 && (
+            {/* Pattern Results */}
+            {patternResults.size > 0 && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold">
-                    Found {getEndsWithTotalWords()} word{getEndsWithTotalWords() !== 1 ? "s" : ""}
+                    Found {getPatternTotalWords()} word{getPatternTotalWords() !== 1 ? "s" : ""}
                   </h2>
                   <Badge variant="secondary" className="text-base px-4 py-2">
-                    {endsWithResults.size} length{endsWithResults.size !== 1 ? "s" : ""}
+                    {patternResults.size} length{patternResults.size !== 1 ? "s" : ""}
                   </Badge>
                 </div>
 
                 <div className="grid gap-6">
-                  {Array.from(endsWithResults.entries()).map(([length, words]) => {
-                    const isExpanded = endsWithExpandedGroups.has(length)
+                  {Array.from(patternResults.entries()).map(([length, words]) => {
+                    const isExpanded = patternExpandedGroups.has(length)
                     const displayWords = isExpanded ? words : words.slice(0, 50)
                     const hasMore = words.length > 50
 
@@ -737,7 +534,7 @@ export default function WordFinder() {
                             ))}
                           </div>
                           {hasMore && (
-                            <Button variant="outline" size="sm" onClick={() => toggleEndsWithExpanded(length)} className="w-full py-4 transition-all duration-300 hover:bg-secondary">
+                            <Button variant="outline" size="sm" onClick={() => togglePatternExpanded(length)} className="w-full py-4 transition-all duration-300 hover:bg-secondary">
                               {isExpanded ? (
                                 <>
                                   <ChevronUp className="mr-2 h-4 w-4" />
@@ -759,12 +556,12 @@ export default function WordFinder() {
               </div>
             )}
 
-            {endsWithResults.size === 0 && endsWithLetters && !endsWithSearching && (
+            {patternResults.size === 0 && (patternStartsWith || patternEndsWith) && !patternSearching && (
               <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                   <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-xl font-semibold mb-2">No words found</h3>
-                  <p className="text-muted-foreground">Try a different suffix</p>
+                  <p className="text-muted-foreground">Try different criteria</p>
                 </CardContent>
               </Card>
             )}
