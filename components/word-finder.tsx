@@ -32,6 +32,14 @@ export default function WordFinder() {
   const [startsWithError, setStartsWithError] = useState("")
   const [startsWithExpandedGroups, setStartsWithExpandedGroups] = useState<Set<number>>(new Set())
 
+  const [endsWithLetters, setEndsWithLetters] = useState("")
+  const [endsWithMaxLength, setEndsWithMaxLength] = useState("")
+  const [endsWithCommonOnly, setEndsWithCommonOnly] = useState(true)
+  const [endsWithResults, setEndsWithResults] = useState<Map<number, string[]>>(new Map())
+  const [endsWithSearching, setEndsWithSearching] = useState(false)
+  const [endsWithError, setEndsWithError] = useState("")
+  const [endsWithExpandedGroups, setEndsWithExpandedGroups] = useState<Set<number>>(new Set())
+
   useEffect(() => {
     loadDictionary()
   }, [])
@@ -243,9 +251,10 @@ export default function WordFinder() {
         </div>
 
         <Tabs defaultValue="anagrams" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 h-auto p-1 bg-muted/50 rounded-xl">
+          <TabsList className="grid w-full grid-cols-3 mb-8 h-auto p-1 bg-muted/50 rounded-xl">
             <TabsTrigger value="anagrams" className="text-base py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300">Form Words</TabsTrigger>
             <TabsTrigger value="starts-with" className="text-base py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300">Starts With</TabsTrigger>
+            <TabsTrigger value="ends-with" className="text-base py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300">Ends With</TabsTrigger>
           </TabsList>
           
           <TabsContent value="anagrams" className="space-y-8">
@@ -546,6 +555,151 @@ export default function WordFinder() {
                   <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-xl font-semibold mb-2">No words found</h3>
                   <p className="text-muted-foreground">Try a different prefix</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="ends-with" className="space-y-8">
+            {/* Ends With Card */}
+            <Card className="border-2">
+              <CardHeader>
+                <CardTitle>Ends With</CardTitle>
+                <CardDescription>Enter 1 to 3 letters to find words that end with them</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="endsWithLetters">Suffix Letters (1-3 chars)</Label>
+                    <Input
+                      id="endsWithLetters"
+                      placeholder="e.g., ing"
+                      value={endsWithLetters}
+                      maxLength={3}
+                      onChange={(e) => setEndsWithLetters(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleEndsWithSearch()}
+                      className="text-lg h-14 px-4 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="endsWithMaxLength">Max Length</Label>
+                    <Input
+                      id="endsWithMaxLength"
+                      type="number"
+                      min="1"
+                      placeholder="Any"
+                      value={endsWithMaxLength}
+                      onChange={(e) => setEndsWithMaxLength(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleEndsWithSearch()}
+                      className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between space-x-2 pt-4 border-t">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="endsWithCommonOnly" className="text-base">Common Words Only</Label>
+                    <p className="text-sm text-muted-foreground">Filter out obscure and rare words</p>
+                  </div>
+                  <Switch
+                    id="endsWithCommonOnly"
+                    checked={endsWithCommonOnly}
+                    onCheckedChange={setEndsWithCommonOnly}
+                  />
+                </div>
+
+                {endsWithError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{endsWithError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <Button
+                  onClick={handleEndsWithSearch}
+                  disabled={endsWithSearching || !endsWithLetters.trim() || endsWithLetters.trim().length > 3}
+                  className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-[1.01] shadow-lg hover:shadow-primary/25 active:scale-[0.99]"
+                  size="lg"
+                >
+                  {endsWithSearching ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="mr-2 h-5 w-5" />
+                      Find Words
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Ends With Results */}
+            {endsWithResults.size > 0 && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">
+                    Found {getEndsWithTotalWords()} word{getEndsWithTotalWords() !== 1 ? "s" : ""}
+                  </h2>
+                  <Badge variant="secondary" className="text-base px-4 py-2">
+                    {endsWithResults.size} length{endsWithResults.size !== 1 ? "s" : ""}
+                  </Badge>
+                </div>
+
+                <div className="grid gap-6">
+                  {Array.from(endsWithResults.entries()).map(([length, words]) => {
+                    const isExpanded = endsWithExpandedGroups.has(length)
+                    const displayWords = isExpanded ? words : words.slice(0, 50)
+                    const hasMore = words.length > 50
+
+                    return (
+                      <Card key={length}>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle>{length}-Letter Words</CardTitle>
+                            <Badge variant="outline">{words.length} found</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex flex-wrap gap-2">
+                            {displayWords.map((word) => (
+                              <Badge key={word} variant="secondary" className="text-sm px-3 py-1.5 font-mono">
+                                {word}
+                              </Badge>
+                            ))}
+                          </div>
+                          {hasMore && (
+                            <Button variant="outline" size="sm" onClick={() => toggleEndsWithExpanded(length)} className="w-full py-4 transition-all duration-300 hover:bg-secondary">
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="mr-2 h-4 w-4" />
+                                  Show Less
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="mr-2 h-4 w-4" />
+                                  Show All {words.length} Words
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {endsWithResults.size === 0 && endsWithLetters && !endsWithSearching && (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No words found</h3>
+                  <p className="text-muted-foreground">Try a different suffix</p>
                 </CardContent>
               </Card>
             )}
