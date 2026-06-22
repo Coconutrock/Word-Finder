@@ -16,13 +16,13 @@ export default function WordFinder() {
   const [searching, setSearching] = useState(false)
   const [letters, setLetters] = useState("")
   const [minLength, setMinLength] = useState("2")
-  const [exactLength, setExactLength] = useState("")
+  const [maxLength, setMaxLength] = useState("")
   const [results, setResults] = useState<Map<number, string[]>>(new Map())
   const [error, setError] = useState("")
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
 
   const [startsWithLetters, setStartsWithLetters] = useState("")
-  const [startsWithExactLength, setStartsWithExactLength] = useState("")
+  const [startsWithMaxLength, setStartsWithMaxLength] = useState("")
   const [startsWithResults, setStartsWithResults] = useState<Map<number, string[]>>(new Map())
   const [startsWithSearching, setStartsWithSearching] = useState(false)
   const [startsWithError, setStartsWithError] = useState("")
@@ -67,19 +67,13 @@ export default function WordFinder() {
     return true
   }
 
-  const findWords = (inputLetters: string, minWordLength: number, exactLen?: number) => {
+  const findWords = (inputLetters: string, minWordLength: number, maxLen?: number) => {
     const foundWords: string[] = []
     const normalizedLetters = inputLetters.toLowerCase().trim()
 
     for (const word of dictionary) {
-      if (exactLen) {
-        if (word.length === exactLen && canFormWord(normalizedLetters, word)) {
-          foundWords.push(word)
-        }
-      } else {
-        if (word.length >= minWordLength && canFormWord(normalizedLetters, word)) {
-          foundWords.push(word)
-        }
+      if (word.length >= minWordLength && (!maxLen || word.length <= maxLen) && canFormWord(normalizedLetters, word)) {
+        foundWords.push(word)
       }
     }
 
@@ -109,8 +103,8 @@ export default function WordFinder() {
 
     setTimeout(() => {
       const minLen = Number.parseInt(minLength) || 2
-      const exactLen = exactLength ? Number.parseInt(exactLength) : undefined
-      const foundWords = findWords(letters, minLen, exactLen)
+      const maxLen = maxLength ? Number.parseInt(maxLength) : undefined
+      const foundWords = findWords(letters, minLen, maxLen)
       setResults(foundWords)
       setSearching(false)
     }, 300)
@@ -136,13 +130,13 @@ export default function WordFinder() {
     })
   }
 
-  const findWordsStartingWith = (prefix: string, exactLen?: number) => {
+  const findWordsStartingWith = (prefix: string, maxLen?: number) => {
     const foundWords: string[] = []
     const normalizedPrefix = prefix.toLowerCase().trim()
 
     for (const word of dictionary) {
       if (word.startsWith(normalizedPrefix)) {
-        if (exactLen && word.length !== exactLen) continue;
+        if (maxLen && word.length > maxLen) continue;
         foundWords.push(word)
       }
     }
@@ -172,8 +166,8 @@ export default function WordFinder() {
     setStartsWithSearching(true)
 
     setTimeout(() => {
-      const exactLen = startsWithExactLength ? Number.parseInt(startsWithExactLength) : undefined
-      const foundWords = findWordsStartingWith(startsWithLetters, exactLen)
+      const maxLen = startsWithMaxLength ? Number.parseInt(startsWithMaxLength) : undefined
+      const foundWords = findWordsStartingWith(startsWithLetters, maxLen)
       setStartsWithResults(foundWords)
       setStartsWithSearching(false)
     }, 300)
@@ -271,14 +265,14 @@ export default function WordFinder() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="exactLength">Exact Length</Label>
+                <Label htmlFor="maxLength">Max Length</Label>
                 <Input
-                  id="exactLength"
+                  id="maxLength"
                   type="number"
                   min="1"
                   placeholder="Any"
-                  value={exactLength}
-                  onChange={(e) => setExactLength(e.target.value)}
+                  value={maxLength}
+                  onChange={(e) => setMaxLength(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
                 />
@@ -404,14 +398,14 @@ export default function WordFinder() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="startsWithExactLength">Exact Length</Label>
+                    <Label htmlFor="startsWithMaxLength">Max Length</Label>
                     <Input
-                      id="startsWithExactLength"
+                      id="startsWithMaxLength"
                       type="number"
                       min="1"
                       placeholder="Any"
-                      value={startsWithExactLength}
-                      onChange={(e) => setStartsWithExactLength(e.target.value)}
+                      value={startsWithMaxLength}
+                      onChange={(e) => setStartsWithMaxLength(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleStartsWithSearch()}
                       className="h-14 px-4 text-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/50"
                     />
